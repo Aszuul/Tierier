@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+
+    <script src="https://cdn.jsdelivr.net/npm/htmx.org@2.0.10/dist/htmx.min.js" integrity="sha384-H5SrcfygHmAuTDZphMHqBJLc3FhssKjG7w/CeCpFReSfwBWDTKpkzPP8c+cLsK+V" crossorigin="anonymous"></script>
+    <!-- Load Sortable.js and HTMX from CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.7/Sortable.min.js" integrity="sha512-ri8dokds012Oxz+iFzMs4KNJXVc+h7J1zq6unM1NTtzBLj4jD1R5BWiK6QycK0TdSdkt7zYcIcv6sUPhmYkbdQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+</head>
+<body>
+    {% block content %}{% endblock %}
+    <script>
+        function makeTableSortable(elt){
+            var sortable = Sortable.create(elt, {
+                animation: 150,
+                // Fire a custom 'end' event on the parent form when dropping an item
+                onEnd: function (evt) {
+                    document.getElementById('sortable-form').dispatchEvent(new Event('end'));
+                }
+            });
+        }
+        document.addEventListener("DOMContentLoaded", function() {
+            var el = document.getElementById('items-list');
+            makeTableSortable(el);
+        });
+        document.addEventListener('htmx:load', function(evt){
+            var el = document.getElementById('items-list');
+            makeTableSortable(el)
+        })
+    </script>
+    <footer>
+        
+    </footer>
+</body>
+</html>

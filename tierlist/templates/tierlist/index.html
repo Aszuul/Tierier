@@ -1,1 +1,34 @@
+{% extends 'base.html' %}
+
+{% block content %}
 <h1>This is the Tierlist page</h1>
+<div>
+    <div name="main-area">
+        <!-- left column; choice list -->
+        <form id="choice-form" hx-post="{% url 'tierlist:update_order' %}" hx-trigger="end">
+            {% csrf_token %}
+            <div id="items-list">
+                {% for choice in choicelist %}
+                    <div class="sortable-item" style="padding:10px; margin:5px; background:#f4f4f4; cursor:grab;">
+                        <input type="hidden" name="item_id" value="{{ choice.id }}">
+                        <span>☰ {{ choice.name }}</span>
+                    </div>
+                {% endfor %}
+            </div>
+        </form>
+
+        <!-- center column; category lists -->
+        <div name="categories">
+
+        </div>
+
+        <!-- right column; add category button -->
+
+    </div>
+
+    <!-- bottom; ranking view -->
+    <ol name="rankings">
+
+    </ol>
+</div>
+{% endblock %}
