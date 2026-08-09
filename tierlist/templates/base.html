@@ -10,18 +10,30 @@
     {% block content %}{% endblock %}
     <script>
         function makeTableSortable(elt){
-            var sortable = Sortable.create(elt, {
+            if (!elt || elt.dataset.sortableInitialized === 'true') {
+                return;
+            }
+
+            var choiceForm = document.getElementById('choice-form');
+            if (!choiceForm) {
+                return;
+            }
+
+            Sortable.create(elt, {
                 animation: 150,
-                // Fire a custom 'end' event on the parent form when dropping an item
-                onEnd: function (evt) {
-                    document.getElementById('sortable-form').dispatchEvent(new Event('end'));
+                onEnd: function () {
+                    choiceForm.dispatchEvent(new CustomEvent('end', { bubbles: true }));
                 }
             });
+
+            elt.dataset.sortableInitialized = 'true';
         }
+
         document.addEventListener("DOMContentLoaded", function() {
             var el = document.getElementById('items-list');
             makeTableSortable(el);
         });
+
         document.addEventListener('htmx:load', function(evt){
             var el = document.getElementById('items-list');
             makeTableSortable(el)

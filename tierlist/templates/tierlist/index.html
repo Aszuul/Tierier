@@ -5,7 +5,12 @@
 <div>
     <div name="main-area">
         <!-- left column; choice list -->
-        <form id="choice-form" hx-post="{% url 'tierlist:update_order' %}" hx-trigger="end">
+         <form id="add-choice-form" method="post" action="{% url 'tierlist:add_choice' %}">
+            {% csrf_token %}
+            <input type="text" name="name" placeholder="Enter choice name" required>
+            <button type="submit">Add Choice</button>
+        </form>
+        <form id="choice-form" hx-post="{% url 'tierlist:update_order' %}" hx-trigger="end" hx-swap="none">
             {% csrf_token %}
             <div id="items-list">
                 {% for choice in choicelist %}

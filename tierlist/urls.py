@@ -6,4 +6,5 @@ app_name = "tierlist"
 urlpatterns = [
     path('', views.index, name="index"),
     path('update_order/', views.update_order, name='update_order'),
+    path('add_choice/', views.add_choice, name='add_choice'),
 ]
