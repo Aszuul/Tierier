@@ -5,12 +5,12 @@
 <div>
     <div name="main-area">
         <!-- left column; choice list -->
-         <form id="add-choice-form" method="post" action="{% url 'tierlist:add_choice' %}">
+        <form id="add-choice-form" method="post" action="{% url 'tierlist:add_choice' %}">
             {% csrf_token %}
             <input type="text" name="name" placeholder="Enter choice name" required>
             <button type="submit">Add Choice</button>
         </form>
-        <form id="choice-form" hx-post="{% url 'tierlist:update_order' %}" hx-trigger="end" hx-swap="none">
+        <form class="sortable-form" id="choice-form" hx-post="{% url 'tierlist:update_order' %}" hx-trigger="end" hx-swap="none">
             {% csrf_token %}
             <div id="items-list">
                 {% for choice in choicelist %}
@@ -24,11 +24,27 @@
 
         <!-- center column; category lists -->
         <div name="categories">
-
+            {% for category_item in category_items %}
+                <div class="category" style="padding:10px; margin:5px; background:#e0e0e0;">
+                    <h3>{{ category_item.name }}</h3>
+                    <div class="category-items">
+                        {% for item in category_item.choices %}
+                            <div class="sortable-item">
+                                <input type="hidden" name="item_id" value="{{ item.choice.id }}">
+                                <span>☰ {{ item.choice.name }}</span>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            {% endfor %}
         </div>
 
         <!-- right column; add category button -->
-
+        <form id="add-category-form" method="post" action="{% url 'tierlist:add_category' %}">
+            {% csrf_token %}
+            <input type="text" name="name" placeholder="Enter category name" required>
+            <button type="submit">Add Category</button>
+        </form>
     </div>
 
     <!-- bottom; ranking view -->
