@@ -10,28 +10,31 @@
             <input type="text" name="name" placeholder="Enter choice name" required>
             <button type="submit">Add Choice</button>
         </form>
-        <form class="sortable-form" id="choice-form" hx-post="{% url 'tierlist:update_order' %}" hx-trigger="end" hx-swap="none">
-            {% csrf_token %}
-            <div id="items-list">
-                {% for choice in choicelist %}
-                    <div class="sortable-item" style="padding:10px; margin:5px; background:#f4f4f4; cursor:grab;">
-                        <input type="hidden" name="item_id" value="{{ choice.id }}">
-                        <span>☰ {{ choice.name }}</span>
-                    </div>
-                {% endfor %}
-            </div>
-        </form>
+        <div id="items-list" class="sortable-list" data-category-id="">
+            {% for choice in choicelist %}
+                <div class="sortable-item" data-choice-id="{{ choice.id }}" style="padding:10px; margin:5px; background:#f4f4f4; cursor:grab;">
+                    <span>☰ {{ choice.name }}</span>
+                    <form method="post" action="{% url 'tierlist:delete_choice' choice.id %}" data-choice-action-form style="display:inline;">
+                        {% csrf_token %}
+                        <button type="submit">Delete</button>
+                    </form>
+                </div>
+            {% endfor %}
+        </div>
 
         <!-- center column; category lists -->
         <div name="categories">
             {% for category_item in category_items %}
                 <div class="category" style="padding:10px; margin:5px; background:#e0e0e0;">
                     <h3>{{ category_item.name }}</h3>
-                    <div class="category-items">
+                    <div class="category-items sortable-list" data-category-id="{{ category_item.id }}" data-remove-url-template="{% url 'tierlist:remove_category_choice' category_item.id 0 %}">
                         {% for item in category_item.choices %}
-                            <div class="sortable-item">
-                                <input type="hidden" name="item_id" value="{{ item.choice.id }}">
+                            <div class="sortable-item" data-choice-id="{{ item.choice.id }}" style="padding:10px; margin:5px; background:#f4f4f4; cursor:grab;">
                                 <span>☰ {{ item.choice.name }}</span>
+                                <form method="post" action="{% url 'tierlist:remove_category_choice' category_item.id item.choice.id %}" data-choice-action-form style="display:inline;">
+                                    {% csrf_token %}
+                                    <button type="submit">Remove</button>
+                                </form>
                             </div>
                         {% endfor %}
                     </div>
