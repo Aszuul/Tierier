@@ -1,58 +1,123 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<h1>This is the Tierlist page</h1>
-<div>
-    <div name="main-area">
-        <!-- left column; choice list -->
-        <form id="add-choice-form" method="post" action="{% url 'tierlist:add_choice' %}">
-            {% csrf_token %}
-            <input type="text" name="name" placeholder="Enter choice name" required>
-            <button type="submit">Add Choice</button>
-        </form>
-        <div id="items-list" class="sortable-list" data-category-id="">
-            {% for choice in choicelist %}
-                <div class="sortable-item" data-choice-id="{{ choice.id }}" style="padding:10px; margin:5px; background:#f4f4f4; cursor:grab;">
-                    <span>☰ {{ choice.name }}</span>
-                    <form method="post" action="{% url 'tierlist:delete_choice' choice.id %}" data-choice-action-form style="display:inline;">
-                        {% csrf_token %}
-                        <button type="submit">Delete</button>
-                    </form>
-                </div>
-            {% endfor %}
+<main class="app-shell">
+    <header class="masthead">
+        <div>
+            <h1>Tierier</h1>
+            <p class="eyebrow">Use weighted categories to rank your choices.</p>
         </div>
+        <p class="mono">Drag. Place. Rank.</p>
+    </header>
 
-        <!-- center column; category lists -->
-        <div name="categories">
-            {% for category_item in category_items %}
-                <div class="category" style="padding:10px; margin:5px; background:#e0e0e0;">
-                    <h3>{{ category_item.name }}</h3>
-                    <div class="category-items sortable-list" data-category-id="{{ category_item.id }}" data-remove-url-template="{% url 'tierlist:remove_category_choice' category_item.id 0 %}">
-                        {% for item in category_item.choices %}
-                            <div class="sortable-item" data-choice-id="{{ item.choice.id }}" style="padding:10px; margin:5px; background:#f4f4f4; cursor:grab;">
-                                <span>☰ {{ item.choice.name }}</span>
-                                <form method="post" action="{% url 'tierlist:remove_category_choice' category_item.id item.choice.id %}" data-choice-action-form style="display:inline;">
-                                    {% csrf_token %}
-                                    <button type="submit">Remove</button>
-                                </form>
-                            </div>
-                        {% endfor %}
+    <section class="workspace" aria-label="Tier list workspace">
+        <section class="panel choices-panel" aria-labelledby="choices-title">
+            <div class="panel-heading">
+                <h2 id="choices-title">Choices</h2>
+                <span class="count">{{ choicelist|length }} items</span>
+            </div>
+            {% if not choice_limit_reached %}
+            <form class="choice-form" id="add-choice-form" method="post" action="{% url 'tierlist:add_choice' %}">
+                {% csrf_token %}
+                <input class="field" type="text" name="name" placeholder="Add a choice..." required>
+                <button class="button button-small" type="submit">Add</button>
+            </form>
+            {% else %}
+            <p class="mono capacity-notice">Choice limit reached (50).</p>
+            {% endif %}
+            <div id="items-list" class="category-items sortable-list" data-category-id="">
+                {% for choice in choicelist %}
+                    <div class="sortable-item" data-choice-id="{{ choice.id }}">
+                        <span class="choice-name"><span class="drag-handle">::</span>{{ choice.name }}</span>
+                        <form method="post" action="{% url 'tierlist:delete_choice' choice.id %}" data-choice-action-form class="item-action">
+                            {% csrf_token %}
+                            <button class="button icon-button button-quiet" type="submit" aria-label="Delete {{ choice.name }}" title="Delete choice">X</button>
+                        </form>
                     </div>
+                {% empty %}
+                    <p class="mono">No choices yet.</p>
+                {% endfor %}
+            </div>
+        </section>
+
+        <section class="panel categories-panel" aria-labelledby="categories-title">
+            <div class="panel-heading">
+                <h2 id="categories-title">Categories</h2>
+                <span style="margin-right: 1rem;" class="mono">scroll to explore</span>
+            </div>
+            <div class="category-scroll">
+                <div class="categories">
+                    {% for category_item in category_items %}
+                        <article class="category">
+                            <div class="category-header">
+                                <form class="category-edit-form" method="post" action="{% url 'tierlist:update_category' category_item.id %}">
+                                    {% csrf_token %}
+                                    <input class="category-name-field" type="text" name="name" value="{{ category_item.name }}" aria-label="Category name" required>
+                                    <label class="category-weight-field">
+                                        <span>Weight</span>
+                                        <input type="number" name="weight" value="{{ category_item.weight }}" min="0.1" max="1" step="0.1" aria-label="Category weight" required>
+                                    </label>
+                                </form>
+                                <div class="category-meta">
+                                    <form method="post" action="{% url 'tierlist:delete_category' category_item.id %}">
+                                        {% csrf_token %}
+                                        <button class="button icon-button button-quiet" type="submit" aria-label="Delete {{ category_item.name }} category" title="Delete category">X</button>
+                                    </form>
+                                </div>
+                            </div>
+                            <div class="category-items sortable-list" data-category-id="{{ category_item.id }}" data-remove-url-template="{% url 'tierlist:remove_category_choice' category_item.id 0 %}">
+                                {% for item in category_item.choices %}
+                                    <div class="sortable-item" data-choice-id="{{ item.choice.id }}">
+                                        <span class="choice-name"><span class="drag-handle">::</span>{{ item.choice.name }}</span>
+                                        <form method="post" action="{% url 'tierlist:remove_category_choice' category_item.id item.choice.id %}" data-choice-action-form class="item-action">
+                                            {% csrf_token %}
+                                            <button class="button icon-button button-quiet" type="submit" aria-label="Remove {{ item.choice.name }} from {{ category_item.name }}" title="Remove from category">X</button>
+                                        </form>
+                                    </div>
+                                {% empty %}
+                                    <p class="mono">Drop choices here.</p>
+                                {% endfor %}
+                            </div>
+                        </article>
+                    {% empty %}
+                        <p class="mono">Add a category to begin.</p>
+                    {% endfor %}
                 </div>
+            </div>
+        </section>
+
+        <aside class="panel add-category-panel" aria-labelledby="add-category-title">
+            <p class="eyebrow">New lane</p>
+            <h2 id="add-category-title">Add category</h2>
+            <p>Give a new tier a name, then start filling it from the choice pool.</p>
+            {% if not category_limit_reached %}
+            <form class="category-form" id="add-category-form" method="post" action="{% url 'tierlist:add_category' %}">
+                {% csrf_token %}
+                <input class="field" type="text" name="name" placeholder="Category name" required>
+                <button class="button" type="submit">Create category</button>
+            </form>
+            {% else %}
+            <p class="mono capacity-notice">Category limit reached (10).</p>
+            {% endif %}
+        </aside>
+    </section>
+
+    <section class="ranking-panel panel" aria-labelledby="ranking-title">
+        <div class="panel-heading">
+            <h2 id="ranking-title">Ranking</h2>
+            <span class="mono">lowest score wins</span>
+        </div>
+        <div class="ranking-list" name="rankings">
+            {% for ranking in rankings %}
+                <div class="ranking-item">
+                    <span class="ranking-position">{{ forloop.counter }}</span>
+                    <span class="choice-name">{{ ranking.choice.name }}</span>
+                    <span class="ranking-score">{{ ranking.score|floatformat:2 }}</span>
+                </div>
+            {% empty %}
+                <div class="ranking-placeholder">Choices must be in every category to appear here</div>
             {% endfor %}
         </div>
-
-        <!-- right column; add category button -->
-        <form id="add-category-form" method="post" action="{% url 'tierlist:add_category' %}">
-            {% csrf_token %}
-            <input type="text" name="name" placeholder="Enter category name" required>
-            <button type="submit">Add Category</button>
-        </form>
-    </div>
-
-    <!-- bottom; ranking view -->
-    <ol name="rankings">
-
-    </ol>
-</div>
+    </section>
+</main>
 {% endblock %}

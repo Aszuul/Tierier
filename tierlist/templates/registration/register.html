@@ -1,0 +1,16 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<main class="auth-shell">
+    <section class="panel auth-panel">
+        <p class="eyebrow">Start ranking</p>
+        <h1>Register</h1>
+        <form method="post" class="auth-form">
+            {% csrf_token %}
+            {{ form.as_p }}
+            <button class="button" type="submit">Create account</button>
+        </form>
+        <p class="mono">Already registered? <a href="{% url 'login' %}">Log in</a></p>
+    </section>
+</main>
+{% endblock %}

@@ -1,4 +1,4 @@
-from django.http import HttpResponse
+from django.shortcuts import redirect
 
 def index(request):
-    return HttpResponse("Hello!")
+    return redirect('tierlist:index')
