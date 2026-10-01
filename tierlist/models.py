@@ -2,6 +2,10 @@ from django.db import models
 from django.conf import settings
 
 
+def default_tierlist_palette():
+    return ['#e85d3f', '#168c79', '#e2b93b', '#5576c4', '#ca5b9a', '#8a6dbe']
+
+
 class TierList(models.Model):
     id = models.AutoField(primary_key=True)
     owner = models.OneToOneField(
@@ -10,6 +14,7 @@ class TierList(models.Model):
         related_name='tier_list',
     )
     name = models.CharField(max_length=100, default='My tier list')
+    palette = models.JSONField(default=default_tierlist_palette)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -21,6 +26,7 @@ class Choice(models.Model):
     tier_list = models.ForeignKey(TierList, on_delete=models.CASCADE)
     name = models.CharField(max_length=100)
     order = models.PositiveIntegerField(default=0)
+    color = models.CharField(max_length=7, default='#e85d3f')
 
     def __str__(self):
         return self.name
@@ -29,7 +35,7 @@ class Category(models.Model):
     id = models.AutoField(primary_key=True)
     tier_list = models.ForeignKey(TierList, on_delete=models.CASCADE)
     name = models.CharField(max_length=100)
-    weight = models.FloatField(default=0.1)
+    weight = models.FloatField(default=1)
     
     class Meta:
         constraints = [

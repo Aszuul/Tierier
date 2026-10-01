@@ -23,11 +23,63 @@ class ChoiceOrderingTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'Second')
         self.assertContains(response, 'First')
+        self.assertContains(response, 'id="theme-toggle"')
+        self.assertContains(response, 'Edit palette color 1')
 
         html = response.content.decode()
         first_index = html.find('Second')
         second_index = html.find('First')
         self.assertLess(first_index, second_index)
+
+    def test_new_choices_receive_unique_colors_from_palette_then_random_fallback(self):
+        palette = self.tier_list.palette
+        for index in range(len(palette) + 1):
+            self.client.post(
+                reverse('tierlist:add_choice'),
+                {'name': f'Choice {index}'},
+            )
+        choices = list(Choice.objects.filter(tier_list=self.tier_list).order_by('order'))
+
+        self.assertEqual([choice.color for choice in choices[:-1]], palette)
+        self.assertNotIn(choices[-1].color, palette)
+        self.assertRegex(choices[-1].color, r'^#[0-9a-f]{6}$')
+
+    def test_palette_and_choice_override_render_in_pool_and_category(self):
+        category = Category.objects.create(tier_list=self.tier_list, name='Top tier')
+        choice = Choice.objects.create(tier_list=self.tier_list, name='Shared color')
+        CategoryChoice.objects.create(category=category, choice=choice)
+
+        self.client.post(
+            reverse('tierlist:update_palette'),
+            {'palette_index': '0', 'color': '#123abc'},
+        )
+        response = self.client.post(
+            reverse('tierlist:update_choice_color', args=[choice.pk]),
+            {'color': '#abcdef'},
+        )
+        self.assertEqual(response.status_code, 302)
+        response = self.client.get(reverse('tierlist:index'))
+        self.assertEqual(response.content.decode().count('--choice-color: #abcdef'), 2)
+
+        response = self.client.post(
+            reverse('tierlist:update_choice_color', args=[choice.pk]),
+            {'color': '#abcdef', 'reset': '1'},
+        )
+        self.assertEqual(response.status_code, 302)
+        response = self.client.get(reverse('tierlist:index'))
+        self.assertEqual(response.content.decode().count('--choice-color: #123abc'), 2)
+
+        self.client.post(
+            reverse('tierlist:update_palette'),
+            {'preset': 'garden'},
+        )
+        self.client.post(
+            reverse('tierlist:add_choice'),
+            {'name': 'Added after palette change'},
+        )
+        response = self.client.get(reverse('tierlist:index'))
+        self.assertEqual(response.content.decode().count('--choice-color: #123abc'), 2)
+        self.assertEqual(response.content.decode().count('--choice-color: #287a5c'), 1)
 
     def test_update_order_persists_item_sequence(self):
         first = Choice.objects.create(tier_list=self.tier_list, name='First', order=0)
@@ -290,10 +342,74 @@ class ChoiceOrderingTests(TestCase):
         self.assertTrue(Choice.objects.filter(pk=choice.pk, tier_list=self.tier_list).exists())
         self.assertFalse(Choice.objects.filter(tier_list=other_list).exists())
 
-    def test_anonymous_users_are_redirected_to_login(self):
+    def test_anonymous_users_can_open_an_empty_tierlist(self):
         self.client.logout()
         response = self.client.get(reverse('tierlist:index'))
-        self.assertRedirects(response, '/accounts/login/?next=/tierlist/')
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'No choices yet.')
+
+    def test_anonymous_choice_order_matches_visible_order(self):
+        self.client.logout()
+        self.client.post(reverse('tierlist:add_choice'), {'name': 'First'})
+        self.client.post(reverse('tierlist:add_choice'), {'name': 'Second'})
+        first, second = self.client.session['tierlist_draft']['choices']
+        self.assertEqual(first['color'], self.tier_list.palette[0])
+        self.assertEqual(second['color'], self.tier_list.palette[1])
+        self.assertNotEqual(first['color'], second['color'])
+
+        self.client.post(
+            reverse('tierlist:update_order'),
+            {'item_id': [str(first['id']), str(second['id'])]},
+        )
+
+        response = self.client.get(reverse('tierlist:index'))
+        html = response.content.decode()
+        self.assertLess(html.find('Second'), html.find('First'))
+
+    def test_anonymous_draft_can_be_edited_and_saved_after_login(self):
+        self.client.logout()
+        self.client.post(reverse('tierlist:add_choice'), {'name': 'Guest choice'})
+        self.client.post(reverse('tierlist:add_category'), {'name': 'Guest category'})
+        choice_id = self.client.session['tierlist_draft']['choices'][0]['id']
+        category_id = self.client.session['tierlist_draft']['categories'][0]['id']
+        self.client.post(
+            reverse('tierlist:update_palette'),
+            {'palette_index': '1', 'color': '#a1b2c3'},
+        )
+        self.client.post(
+            reverse('tierlist:update_choice_color', args=[choice_id]),
+            {'color': '#d4e5f6'},
+        )
+        self.client.post(
+            reverse('tierlist:update_order'),
+            {'category_id': str(category_id), 'item_id': [str(choice_id)]},
+        )
+        guest_response = self.client.get(reverse('tierlist:index'))
+        self.assertEqual(guest_response.content.decode().count('--choice-color: #d4e5f6'), 2)
+
+        response = self.client.get(reverse('tierlist:save'))
+        self.assertRedirects(
+            response,
+            f"{reverse('login')}?next={reverse('tierlist:save')}",
+        )
+        self.assertFalse(
+            Choice.objects.filter(tier_list=self.tier_list, name='Guest choice').exists()
+        )
+
+        self.client.login(username='owner', password='test-password-123')
+        response = self.client.get(reverse('tierlist:save'))
+
+        self.assertRedirects(response, reverse('tierlist:index'))
+        saved_choice = Choice.objects.get(tier_list=self.tier_list, name='Guest choice')
+        saved_category = Category.objects.get(tier_list=self.tier_list, name='Guest category')
+        self.tier_list.refresh_from_db()
+        self.assertEqual(self.tier_list.palette[1], '#a1b2c3')
+        self.assertEqual(saved_choice.color, '#d4e5f6')
+        self.assertEqual(saved_category.weight, 1)
+        self.assertTrue(
+            CategoryChoice.objects.filter(category=saved_category, choice=saved_choice).exists()
+        )
+        self.assertNotIn('tierlist_draft', self.client.session)
 
     def test_registration_creates_user_and_personal_tier_list(self):
         self.client.logout()

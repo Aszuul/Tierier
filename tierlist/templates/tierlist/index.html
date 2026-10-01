@@ -7,6 +7,9 @@
             <h1>Tierier</h1>
             <p class="eyebrow">Use weighted categories to rank your choices.</p>
         </div>
+        {% if not user.is_authenticated %}
+        <a class="button button-small" href="{% url 'login' %}?next={% url 'tierlist:save' %}">Save tierlist</a>
+        {% endif %}
         <p class="mono">Drag. Place. Rank.</p>
     </header>
 
@@ -15,7 +18,39 @@
             <div class="panel-heading">
                 <h2 id="choices-title">Choices</h2>
                 <span class="count">{{ choicelist|length }} items</span>
+                <button class="button button-small button-quiet" type="button" id="open-palette-dialog">Palette</button>
             </div>
+            <dialog class="palette-dialog" id="palette-dialog" aria-labelledby="palette-dialog-title">
+                <div class="palette-dialog-heading">
+                    <h2 id="palette-dialog-title">Choice colors</h2>
+                    <form method="dialog"><button class="button icon-button button-quiet" aria-label="Close palette settings">X</button></form>
+                </div>
+                <section class="palette-controls" aria-label="Choice color palette">
+                <form method="post" action="{% url 'tierlist:update_palette' %}" class="palette-preset-form">
+                    {% csrf_token %}
+                    <label for="palette-preset">Palette</label>
+                    <select id="palette-preset" name="preset">
+                        <option value="" {% if not current_palette_preset %}selected{% endif %}>Custom palette</option>
+                        {% for preset_name, preset_colors in palette_presets.items %}
+                        <option value="{{ preset_name }}" {% if preset_colors == palette %}selected{% endif %}>{{ preset_name|title }}</option>
+                        {% endfor %}
+                    </select>
+                    <button class="button button-small" type="submit">Apply</button>
+                </form>
+                <div class="palette-swatches" aria-label="Edit palette colors">
+                    {% for color in palette %}
+                    <form method="post" action="{% url 'tierlist:update_palette' %}" data-palette-form>
+                        {% csrf_token %}
+                        <input type="hidden" name="palette_index" value="{{ forloop.counter0 }}">
+                        <label>
+                            <span class="visually-hidden">Edit palette color {{ forloop.counter }}</span>
+                            <input type="color" name="color" value="{{ color }}" aria-label="Edit palette color {{ forloop.counter }}" onchange="this.form.requestSubmit()">
+                        </label>
+                    </form>
+                    {% endfor %}
+                </div>
+                </section>
+            </dialog>
             {% if not choice_limit_reached %}
             <form class="choice-form" id="add-choice-form" method="post" action="{% url 'tierlist:add_choice' %}">
                 {% csrf_token %}
@@ -27,8 +62,12 @@
             {% endif %}
             <div id="items-list" class="category-items sortable-list" data-category-id="">
                 {% for choice in choicelist %}
-                    <div class="sortable-item" data-choice-id="{{ choice.id }}">
+                    <div class="sortable-item" data-choice-id="{{ choice.id }}" style="--choice-color: {{ choice.color }}">
                         <span class="choice-name"><span class="drag-handle">::</span>{{ choice.name }}</span>
+                        <form method="post" action="{% url 'tierlist:update_choice_color' choice.id %}" class="choice-color-form">
+                            {% csrf_token %}
+                            <input type="color" name="color" value="{{ choice.color }}" aria-label="Change color for {{ choice.name }}" title="Change color" onchange="this.form.requestSubmit()">
+                        </form>
                         <form method="post" action="{% url 'tierlist:delete_choice' choice.id %}" data-choice-action-form class="item-action">
                             {% csrf_token %}
                             <button class="button icon-button button-quiet" type="submit" aria-label="Delete {{ choice.name }}" title="Delete choice">X</button>
@@ -43,7 +82,6 @@
         <section class="panel categories-panel" aria-labelledby="categories-title">
             <div class="panel-heading">
                 <h2 id="categories-title">Categories</h2>
-                <span style="margin-right: 1rem;" class="mono">scroll to explore</span>
             </div>
             <div class="category-scroll">
                 <div class="categories">
@@ -67,7 +105,7 @@
                             </div>
                             <div class="category-items sortable-list" data-category-id="{{ category_item.id }}" data-remove-url-template="{% url 'tierlist:remove_category_choice' category_item.id 0 %}">
                                 {% for item in category_item.choices %}
-                                    <div class="sortable-item" data-choice-id="{{ item.choice.id }}">
+                                    <div class="sortable-item" data-choice-id="{{ item.choice.id }}" style="--choice-color: {{ item.choice.color }}">
                                         <span class="choice-name"><span class="drag-handle">::</span>{{ item.choice.name }}</span>
                                         <form method="post" action="{% url 'tierlist:remove_category_choice' category_item.id item.choice.id %}" data-choice-action-form class="item-action">
                                             {% csrf_token %}
@@ -87,7 +125,6 @@
         </section>
 
         <aside class="panel add-category-panel" aria-labelledby="add-category-title">
-            <p class="eyebrow">New lane</p>
             <h2 id="add-category-title">Add category</h2>
             <p>Give a new tier a name, then start filling it from the choice pool.</p>
             {% if not category_limit_reached %}
@@ -109,7 +146,7 @@
         </div>
         <div class="ranking-list" name="rankings">
             {% for ranking in rankings %}
-                <div class="ranking-item">
+                <div style="--choice-color: {{ ranking.choice.color }}" class="ranking-item">
                     <span class="ranking-position">{{ forloop.counter }}</span>
                     <span class="choice-name">{{ ranking.choice.name }}</span>
                     <span class="ranking-score">{{ ranking.score|floatformat:2 }}</span>

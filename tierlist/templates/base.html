@@ -6,6 +6,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tierier</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
+    <script>
+        (function () {
+            var theme = localStorage.getItem('tierier-theme');
+            if (theme === 'light' || theme === 'dark') {
+                document.documentElement.dataset.theme = theme;
+            }
+        })();
+    </script>
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="stylesheet" href="{% static 'tierlist/style.css' %}">
 
@@ -17,6 +25,7 @@
     <nav class="site-nav" aria-label="Account navigation">
         <a class="site-brand" href="{% url 'tierlist:index' %}">Tierier</a>
         <div class="account-links">
+            <button class="button button-small button-quiet" type="button" id="theme-toggle" aria-label="Toggle dark mode" aria-pressed="false">Dark mode</button>
             {% if user.is_authenticated %}
                 <span class="mono">{{ user.username }}</span>
                 <form method="post" action="{% url 'logout' %}">
@@ -31,11 +40,14 @@
     </nav>
     {% block content %}{% endblock %}
     <script>
+
         function makeTableSortable(elt){
             if (!elt || elt.dataset.sortableInitialized === 'true') return;
 
             Sortable.create(elt, {
                 animation: 150,
+                filter: 'input, button, form',
+                preventOnFilter: false,
                 group: {
                     name: 'tierlist-choices',
                     pull: 'clone',
@@ -76,7 +88,13 @@
                         headers: {'X-CSRFToken': csrfToken},
                         body: formData
                     }).then(function (response) {
-                        if (response.ok) window.location.reload();
+                        if (response.ok) {
+                            var categoryScroll = document.querySelector('.category-scroll');
+                            if (categoryScroll) {
+                                sessionStorage.setItem('category-scroll-left', categoryScroll.scrollLeft);
+                            }
+                            window.location.reload();
+                        }
                     });
                 }
             });
@@ -103,6 +121,72 @@
                     if (response.ok) window.location.reload();
                 });
             });
+        });
+
+        document.addEventListener('DOMContentLoaded', function () {
+            var themeToggle = document.getElementById('theme-toggle');
+            var colorScheme = window.matchMedia('(prefers-color-scheme: dark)');
+            var updateThemeToggle = function () {
+                var theme = document.documentElement.dataset.theme || (colorScheme.matches ? 'dark' : 'light');
+                var isDark = theme === 'dark';
+                themeToggle.setAttribute('aria-pressed', String(isDark));
+                themeToggle.textContent = isDark ? 'Dark mode on' : 'Dark mode';
+            };
+            updateThemeToggle();
+            themeToggle.addEventListener('click', function () {
+                var theme = document.documentElement.dataset.theme || (colorScheme.matches ? 'dark' : 'light');
+                var nextTheme = theme === 'dark' ? 'light' : 'dark';
+                document.documentElement.dataset.theme = nextTheme;
+                localStorage.setItem('tierier-theme', nextTheme);
+                updateThemeToggle();
+            });
+            colorScheme.addEventListener('change', updateThemeToggle);
+
+            var choiceInput = document.querySelector('#add-choice-form input[name="name"]');
+            var choiceForm = document.getElementById('add-choice-form');
+            var paletteDialog = document.getElementById('palette-dialog');
+            var openPaletteDialog = document.getElementById('open-palette-dialog');
+            if (paletteDialog && openPaletteDialog) {
+                openPaletteDialog.addEventListener('click', function () {
+                    paletteDialog.showModal();
+                });
+                paletteDialog.querySelectorAll('form[action*="palette/update"]').forEach(function (form) {
+                    form.addEventListener('submit', function () {
+                        sessionStorage.setItem('reopen-palette-dialog', 'true');
+                    });
+                });
+                if (sessionStorage.getItem('reopen-palette-dialog') === 'true') {
+                    sessionStorage.removeItem('reopen-palette-dialog');
+                    paletteDialog.showModal();
+                }
+            }
+            if (choiceInput && sessionStorage.getItem('focus-choice-input') === 'true') {
+                sessionStorage.removeItem('focus-choice-input');
+                choiceInput.focus();
+            }
+            if (choiceForm) {
+                choiceForm.addEventListener('submit', function () {
+                    sessionStorage.setItem('focus-choice-input', 'true');
+                });
+            }
+
+            var categoryScroll = document.querySelector('.category-scroll');
+            if (!categoryScroll) return;
+            var categoriesPanel = categoryScroll.closest('.categories-panel');
+            // var updateOverflowShadow = function () {
+            //     categoriesPanel.classList.toggle(
+            //         'has-right-overflow',
+            //         categoryScroll.scrollLeft + categoryScroll.clientWidth < categoryScroll.scrollWidth - 1
+            //     );
+            // };
+            var savedScroll = sessionStorage.getItem('category-scroll-left');
+            if (savedScroll !== null) {
+                categoryScroll.scrollLeft = Number(savedScroll);
+                sessionStorage.removeItem('category-scroll-left');
+            }
+            // updateOverflowShadow();
+            // categoryScroll.addEventListener('scroll', updateOverflowShadow);
+            // window.addEventListener('resize', updateOverflowShadow);
         });
     </script>
     <footer>
