@@ -102,7 +102,7 @@ def build_index_context(choices, categories, memberships, palette):
         category_choice_ids.append({item.choice.id for item in category_choices})
         for index, item in enumerate(category_choices):
             choice_id = item.choice.id
-            scores[choice_id] = scores.get(choice_id, 0) + index * category.weight
+            scores[choice_id] = scores.get(choice_id, 0) + index * (1.1 - category.weight)
         category_items.append({
             'id': category.id,
             'name': category.name,
@@ -129,7 +129,6 @@ def build_index_context(choices, categories, memberships, palette):
         'palette_presets': BUILT_IN_PALETTES,
         'current_palette_preset': get_palette_preset_name(palette),
     }
-
 
 def register(request):
     if request.user.is_authenticated:
@@ -383,6 +382,7 @@ def remove_category_choice(request, category_id, choice_id):
 
 
 @login_required
+@require_POST
 def save_draft(request):
     draft = request.session.get('tierlist_draft')
     if draft:
@@ -397,7 +397,7 @@ def save_draft(request):
                 tier_list=tier_list,
                 name=choice['name'],
                 order=choice_offset + choice['order'],
-            color=choice['color'],
+                color=choice['color'],
             )
         for category in draft['categories']:
             saved_category = Category.objects.create(

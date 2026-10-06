@@ -144,6 +144,8 @@
 
             var choiceInput = document.querySelector('#add-choice-form input[name="name"]');
             var choiceForm = document.getElementById('add-choice-form');
+            var CategoryInput = document.querySelector('#add-category-form input[name="name"]');
+            var categoryForm = document.getElementById('add-category-form');
             var paletteDialog = document.getElementById('palette-dialog');
             var openPaletteDialog = document.getElementById('open-palette-dialog');
             if (paletteDialog && openPaletteDialog) {
@@ -167,6 +169,15 @@
             if (choiceForm) {
                 choiceForm.addEventListener('submit', function () {
                     sessionStorage.setItem('focus-choice-input', 'true');
+                });
+            }
+            if (CategoryInput && sessionStorage.getItem('focus-category-input') === 'true') {
+                sessionStorage.removeItem('focus-category-input');
+                CategoryInput.focus();
+            }
+            if (categoryForm) {
+                categoryForm.addEventListener('submit', function () {
+                    sessionStorage.setItem('focus-category-input', 'true');
                 });
             }
 

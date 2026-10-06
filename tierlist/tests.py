@@ -59,7 +59,7 @@ class ChoiceOrderingTests(TestCase):
         )
         self.assertEqual(response.status_code, 302)
         response = self.client.get(reverse('tierlist:index'))
-        self.assertEqual(response.content.decode().count('--choice-color: #abcdef'), 2)
+        self.assertEqual(response.content.decode().count('--choice-color: #abcdef'), 3)
 
         response = self.client.post(
             reverse('tierlist:update_choice_color', args=[choice.pk]),
@@ -67,7 +67,7 @@ class ChoiceOrderingTests(TestCase):
         )
         self.assertEqual(response.status_code, 302)
         response = self.client.get(reverse('tierlist:index'))
-        self.assertEqual(response.content.decode().count('--choice-color: #123abc'), 2)
+        self.assertEqual(response.content.decode().count('--choice-color: #123abc'), 3)
 
         self.client.post(
             reverse('tierlist:update_palette'),
@@ -78,7 +78,7 @@ class ChoiceOrderingTests(TestCase):
             {'name': 'Added after palette change'},
         )
         response = self.client.get(reverse('tierlist:index'))
-        self.assertEqual(response.content.decode().count('--choice-color: #123abc'), 2)
+        self.assertEqual(response.content.decode().count('--choice-color: #123abc'), 3)
         self.assertEqual(response.content.decode().count('--choice-color: #287a5c'), 1)
 
     def test_update_order_persists_item_sequence(self):
@@ -385,7 +385,7 @@ class ChoiceOrderingTests(TestCase):
             {'category_id': str(category_id), 'item_id': [str(choice_id)]},
         )
         guest_response = self.client.get(reverse('tierlist:index'))
-        self.assertEqual(guest_response.content.decode().count('--choice-color: #d4e5f6'), 2)
+        self.assertEqual(guest_response.content.decode().count('--choice-color: #d4e5f6'), 3)
 
         response = self.client.get(reverse('tierlist:save'))
         self.assertRedirects(
@@ -397,7 +397,7 @@ class ChoiceOrderingTests(TestCase):
         )
 
         self.client.login(username='owner', password='test-password-123')
-        response = self.client.get(reverse('tierlist:save'))
+        response = self.client.post(reverse('tierlist:save'))
 
         self.assertRedirects(response, reverse('tierlist:index'))
         saved_choice = Choice.objects.get(tier_list=self.tier_list, name='Guest choice')
@@ -410,6 +410,11 @@ class ChoiceOrderingTests(TestCase):
             CategoryChoice.objects.filter(category=saved_category, choice=saved_choice).exists()
         )
         self.assertNotIn('tierlist_draft', self.client.session)
+
+    def test_save_draft_requires_post(self):
+        response = self.client.get(reverse('tierlist:save'))
+
+        self.assertEqual(response.status_code, 405)
 
     def test_registration_creates_user_and_personal_tier_list(self):
         self.client.logout()

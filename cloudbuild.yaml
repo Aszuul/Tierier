@@ -1,0 +1,46 @@
+steps:
+  - name: 'python:3.12-slim'
+    id: test
+    entrypoint: bash
+    args:
+      - -lc
+      - |
+        pip install --upgrade pip
+        pip install -r requirements.txt
+        python manage.py test --verbosity 1
+        python manage.py check --deploy
+
+  - name: 'gcr.io/cloud-builders/docker'
+    id: build
+    args:
+      - build
+      - -t
+      - '${_IMAGE_REPO}/tierier:${SHORT_SHA}'
+      - .
+
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk:slim'
+    id: deploy
+    entrypoint: bash
+    args:
+      - -lc
+      - |
+        gcloud auth configure-docker '${_REGION}-docker.pkg.dev' --quiet
+        gcloud run deploy ${_SERVICE_NAME} \
+          --image='${_IMAGE_REPO}/tierier:${SHORT_SHA}' \
+          --platform=managed \
+          --region=${_REGION} \
+          --allow-unauthenticated \
+          --set-secrets=DJANGO_SECRET_KEY=${_SECRET_NAME}:latest,DATABASE_URL=${_DB_SECRET_NAME}:latest \
+          --set-env-vars=DJANGO_DEBUG=False,DJANGO_ALLOWED_HOSTS=${_ALLOWED_HOSTS},CSRF_TRUSTED_ORIGINS=${_CSRF_TRUSTED_ORIGINS}
+
+images:
+  - '${_IMAGE_REPO}/tierier:${SHORT_SHA}'
+
+substitutions:
+  _IMAGE_REPO: '${_REGION}-docker.pkg.dev/${PROJECT_ID}/tierier'
+  _SERVICE_NAME: 'tierier'
+  _REGION: 'us-central1'
+  _ALLOWED_HOSTS: 'localhost,127.0.0.1,*.run.app'
+  _CSRF_TRUSTED_ORIGINS: 'https://*.run.app'
+  _SECRET_NAME: 'django-secret'
+  _DB_SECRET_NAME: 'database-url'
