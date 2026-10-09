@@ -1,2 +1,16 @@
 **/__pycache__
 *.sqlite3
+.env
+.venv
+
+# Terraform local data and state
+**/.terraform/*
+*.tfstate
+*.tfstate.*
+*.tfplan
+crash.log
+crash.*.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
