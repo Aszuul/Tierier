@@ -102,7 +102,7 @@ def build_index_context(choices, categories, memberships, palette):
         category_choice_ids.append({item.choice.id for item in category_choices})
         for index, item in enumerate(category_choices):
             choice_id = item.choice.id
-            scores[choice_id] = scores.get(choice_id, 0) + index * (1.1 - category.weight)
+            scores[choice_id] = round(scores.get(choice_id, 0) + index * (1.1 - category.weight), 1)
         category_items.append({
             'id': category.id,
             'name': category.name,

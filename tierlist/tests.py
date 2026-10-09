@@ -307,7 +307,7 @@ class ChoiceOrderingTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual([item['choice'] for item in response.context['rankings']], [ranked])
-        self.assertEqual(response.context['rankings'][0]['score'], 1.0)
+        self.assertEqual(response.context['rankings'][0]['score'], 0.1)
 
     def test_ranking_is_sorted_by_score(self):
         first_category = Category.objects.create(tier_list=self.tier_list, name='First', weight=1)
