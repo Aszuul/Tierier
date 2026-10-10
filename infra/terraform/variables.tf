@@ -4,9 +4,27 @@ variable "project_id" {
 }
 
 variable "region" {
-  description = "Region for Cloud Run, Artifact Registry, and Cloud SQL."
+  description = "Region for Cloud Run, Artifact Registry, the VPC subnet, and PostgreSQL VM."
   type        = string
   default     = "us-central1"
+}
+
+variable "vpc_network_name" {
+  description = "VPC network used by Cloud Run and the PostgreSQL VM."
+  type        = string
+  default     = "tierier-vpc"
+}
+
+variable "vpc_subnet_name" {
+  description = "Subnet used by Cloud Run direct VPC egress and the PostgreSQL VM."
+  type        = string
+  default     = "tierier-subnet"
+}
+
+variable "vpc_subnet_cidr" {
+  description = "IPv4 range for the Cloud Run and PostgreSQL subnet."
+  type        = string
+  default     = "10.10.0.0/24"
 }
 
 variable "artifact_repository_id" {
@@ -15,45 +33,32 @@ variable "artifact_repository_id" {
   default     = "tierier"
 }
 
-variable "sql_instance_name" {
-  description = "Cloud SQL instance name."
+variable "postgres_instance_name" {
+  description = "Compute Engine VM name for PostgreSQL."
   type        = string
-  default     = "tierier-postgres"
+  default     = "tierier-postgres-vm"
 }
 
-variable "sql_database_name" {
-  description = "Application database name created in Cloud SQL."
+variable "postgres_database_name" {
+  description = "Application database name created on the PostgreSQL VM."
   type        = string
   default     = "tierier"
-}
-
-variable "sql_database_version" {
-  description = "Cloud SQL PostgreSQL major version."
-  type        = string
-  default     = "POSTGRES_16"
-}
-
-variable "sql_tier" {
-  description = "Cloud SQL machine tier. Choose a size appropriate for the workload and budget."
-  type        = string
-  default     = "db-custom-1-3840"
-}
-
-variable "sql_availability_type" {
-  description = "Cloud SQL availability: ZONAL or REGIONAL. REGIONAL costs more but provides HA."
-  type        = string
-  default     = "ZONAL"
 
   validation {
-    condition     = contains(["ZONAL", "REGIONAL"], var.sql_availability_type)
-    error_message = "sql_availability_type must be ZONAL or REGIONAL."
+    condition     = can(regex("^[a-z][a-z0-9_]{0,62}$", var.postgres_database_name))
+    error_message = "postgres_database_name must start with a lowercase letter and contain only lowercase letters, digits, and underscores."
   }
 }
 
-variable "sql_deletion_protection" {
-  description = "Prevent accidental Terraform deletion of the Cloud SQL instance."
-  type        = bool
-  default     = true
+variable "postgres_user" {
+  description = "PostgreSQL login allowed to connect from the VPC subnet. Create it with a password after the VM starts."
+  type        = string
+  default     = "tierier"
+
+  validation {
+    condition     = can(regex("^[a-z][a-z0-9_]{0,62}$", var.postgres_user))
+    error_message = "postgres_user must start with a lowercase letter and contain only lowercase letters, digits, and underscores."
+  }
 }
 
 variable "runtime_service_account_id" {

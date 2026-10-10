@@ -10,3 +10,4 @@ staticfiles/
 coverage/
 .pytest_cache/
 .mypy_cache/
+infra/

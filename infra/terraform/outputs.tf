@@ -3,14 +3,29 @@ output "artifact_registry_repository" {
   value       = "${var.region}-docker.pkg.dev/${var.project_id}/${google_artifact_registry_repository.app.repository_id}"
 }
 
-output "cloud_sql_connection_name" {
-  description = "Connection name to attach to Cloud Run with --add-cloudsql-instances."
-  value       = google_sql_database_instance.app.connection_name
+output "postgres_private_ip" {
+  description = "Private IP address for the PostgreSQL VM; use it as the DATABASE_URL host."
+  value       = google_compute_instance.postgres.network_interface[0].network_ip
 }
 
-output "cloud_sql_database_name" {
-  description = "PostgreSQL database created for the application."
-  value       = google_sql_database.app.name
+output "postgres_database_name" {
+  description = "PostgreSQL database created on the VM."
+  value       = var.postgres_database_name
+}
+
+output "postgres_user" {
+  description = "PostgreSQL login to create on the VM."
+  value       = var.postgres_user
+}
+
+output "vpc_network_name" {
+  description = "VPC network name to configure on the Cloud Build trigger."
+  value       = google_compute_network.app.name
+}
+
+output "vpc_subnet_name" {
+  description = "VPC subnet name to configure on the Cloud Build trigger."
+  value       = google_compute_subnetwork.app.name
 }
 
 output "runtime_service_account_email" {

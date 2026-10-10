@@ -4,7 +4,7 @@ This Terraform root provisions the shared infrastructure used by the existing Cl
 
 - Required Google Cloud APIs
 - Artifact Registry Docker repository
-- Cloud SQL for PostgreSQL, an application database, automated backups, and point-in-time recovery
+- A private VPC and subnet shared by Cloud Run direct VPC egress and a PostgreSQL Compute Engine VM (`e2-micro`)
 - Secret Manager secret containers (secret values are not managed by Terraform)
 - A Cloud Run runtime service account and a dedicated Cloud Build deployer service account with scoped IAM
 
@@ -28,7 +28,7 @@ gcloud storage buckets update gs://UNIQUE_STATE_BUCKET --versioning
 
 ## Initialize and apply
 
-Run these commands from this directory. Copy `terraform.tfvars.example` to `terraform.tfvars`, set the project ID, and adjust the database tier/availability to match your budget and reliability needs. `terraform.tfvars` is intentionally not committed.
+Run these commands from this directory. Copy `terraform.tfvars.example` to `terraform.tfvars` and set the project ID. `terraform.tfvars` is intentionally not committed. The PostgreSQL VM uses Ubuntu 24.04's PostgreSQL package and a 20 GB standard persistent disk.
 
 ```sh
 terraform init -backend-config="bucket=UNIQUE_STATE_BUCKET" -backend-config="prefix=tierier/prod"
@@ -40,7 +40,23 @@ terraform apply tfplan
 
 Review and protect saved plan files because plans and state can contain sensitive values. Do not commit them. For production, run Terraform through a protected CI identity using Workload Identity Federation or service-account impersonation rather than a downloaded service-account key.
 
-Cloud SQL deletion protection is enabled by default. To intentionally remove the instance, first set `sql_deletion_protection = false`, apply that change, verify backups/retention, and only then destroy.
+This replaces the former Cloud SQL resources. If they already exist in the Terraform state or contain data, back up and migrate that data before applying; Terraform will plan to delete Cloud SQL.
+
+## Tests
+
+Run the plan-only unit tests from the repository root. They use a mocked Google provider and do not create cloud resources:
+
+```powershell
+tofu -chdir=infra/terraform test -filter=tests/resources.tftest.hcl
+```
+
+After applying the infrastructure and completing PostgreSQL setup, run the live integration checks:
+
+```powershell
+.\infra\terraform\tests\postgres.integration.ps1 -ProjectId YOUR_PROJECT_ID
+```
+
+The integration check describes the VM and firewall, then uses IAP SSH to check PostgreSQL and the application database. It requires `gcloud` authentication and permission to inspect the resources and connect through IAP; `gcloud compute ssh` may register an SSH key in project or OS Login metadata.
 
 ## Connect Cloud Build and Cloud Run
 
@@ -48,7 +64,7 @@ After apply, use the Terraform outputs when configuring the Cloud Build trigger 
 
 - Set the trigger's service account to `cloud_build_service_account_email`.
 - Set Cloud Run's runtime service account to `runtime_service_account_email`.
-- Add `--add-cloudsql-instances=CLOUD_SQL_CONNECTION_NAME` to `gcloud run deploy`.
+- Keep the Cloud Build substitutions `_VPC_NETWORK` and `_VPC_SUBNET` aligned with the Terraform outputs `vpc_network_name` and `vpc_subnet_name`. Cloud Run uses direct VPC egress to reach the database's private IP.
 - Set `DATABASE_URL` and `DJANGO_SECRET_KEY` from the secret IDs in the outputs.
 - Set the image repository to `artifact_registry_repository`.
 
@@ -56,18 +72,34 @@ The build-trigger creator needs permission to use the configured build service a
 
 ## Database credentials and secrets
 
-Terraform creates the database and secret containers, but intentionally does not create a PostgreSQL login or secret versions. This keeps database passwords out of Terraform configuration and state. Create a dedicated least-privilege PostgreSQL user through an approved secure process, then add versions to the two Secret Manager secrets. Do this before deploying the service.
+Terraform installs PostgreSQL and creates the application database, but intentionally does not create a PostgreSQL login or secret versions. This keeps database passwords out of Terraform configuration and state. After the VM starts, create the login with a password using IAP SSH:
 
-For Cloud Run's Cloud SQL socket connection, configure `DATABASE_URL` in the form:
-
-```text
-postgresql://DB_USER:URL_ENCODED_PASSWORD@/tierier?host=/cloudsql/PROJECT_ID:REGION:tierier-postgres
+```sh
+gcloud compute ssh tierier-postgres-vm --zone=us-central1-a --tunnel-through-iap --command="sudo -u postgres psql"
 ```
 
-URL-encode special characters in the username/password. Do not use a public authorized network for the database; Cloud Run connects through the Cloud SQL integration and the runtime service account's Cloud SQL Client permission.
+In the PostgreSQL prompt, create the login (use the `postgres_user` output value):
+
+```sql
+CREATE ROLE tierier LOGIN;
+\password tierier
+GRANT CONNECT ON DATABASE tierier TO tierier;
+\c tierier
+GRANT USAGE, CREATE ON SCHEMA public TO tierier;
+```
+
+The `\password` command prompts without echoing the password. Replace the example database and role names if you changed their Terraform defaults.
+
+Store a `DATABASE_URL` secret version using the VM's `postgres_private_ip` output:
+
+```text
+postgresql://DB_USER:URL_ENCODED_PASSWORD@PRIVATE_IP:5432/DATABASE_NAME
+```
+
+URL-encode special characters in the username/password. PostgreSQL ingress is restricted to the VPC subnet; do not open port 5432 to the public internet. The VM has an external IP for operating-system package updates, but the firewall does not allow public database or SSH ingress.
 
 ## Migrations
 
-Run Django migrations as a serialized release step after the image is built and before deploying it, preferably as a Cloud Run Job using the same image, runtime service account, secret references, and Cloud SQL attachment. Execute `python manage.py migrate --noinput` once per release. Keep schema changes backward-compatible with the currently serving revision; perform destructive schema cleanup in a later release.
+Run Django migrations as a serialized release step after the image is built and before deploying it, preferably as a Cloud Run Job using the same image and secret references. Execute `python manage.py migrate --noinput` once per release. Keep schema changes backward-compatible with the currently serving revision; perform destructive schema cleanup in a later release.
 
-The current `cloudbuild.yaml` does not yet attach Cloud SQL, select these service accounts, or run migrations. Wire those values into the Cloud Build trigger/deploy workflow separately; do not add the Terraform apply to every application deployment.
+The current `cloudbuild.yaml` configures Cloud Run network egress but does not select the Terraform-created service accounts or run migrations. Wire those values into the Cloud Build trigger/deploy workflow separately; do not add the Terraform apply to every application deployment. This single-VM database has no managed backups or high availability; arrange backups before relying on it for important data.

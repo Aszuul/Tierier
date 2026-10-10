@@ -8,7 +8,9 @@ terraform {
     }
   }
 
-  backend "gcs" {}
+  backend "gcs" {
+    bucket = "tierier-tfstate"
+  }
 }
 
 provider "google" {
