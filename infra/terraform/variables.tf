@@ -1,6 +1,7 @@
 variable "project_id" {
   description = "Google Cloud project ID with billing enabled."
   type        = string
+  default     = "tierier"
 }
 
 variable "region" {
@@ -50,6 +51,7 @@ variable "postgres_database_name" {
   }
 }
 
+
 variable "postgres_user" {
   description = "PostgreSQL login allowed to connect from the VPC subnet. Create it with a password after the VM starts."
   type        = string
@@ -79,8 +81,20 @@ variable "django_secret_id" {
   default     = "django-secret"
 }
 
+variable "django_secret_key" {
+  description = "Secret value for DJANGO_SECRET_KEY. Create it after the VM starts."
+  type        = string
+  default     = "tierier"
+}
+
 variable "database_url_secret_id" {
   description = "Secret Manager secret ID for DATABASE_URL. Terraform creates the secret, not its value."
   type        = string
   default     = "database-url"
+}
+
+variable "postgres_database_password" {
+  description = "Password for the PostgreSQL database user. Create it after the VM starts."
+  type        = string
+  default     = "tierier"
 }

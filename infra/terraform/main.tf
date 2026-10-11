@@ -41,6 +41,7 @@ resource "google_compute_subnetwork" "app" {
   region        = var.region
   network       = google_compute_network.app.id
   ip_cidr_range = var.vpc_subnet_cidr
+  private_ip_google_access = true
 }
 
 resource "google_compute_firewall" "postgres" {
@@ -89,8 +90,6 @@ resource "google_compute_instance" "postgres" {
   network_interface {
     network    = google_compute_network.app.id
     subnetwork = google_compute_subnetwork.app.id
-
-    access_config {}
   }
 
   metadata_startup_script = <<-EOT
@@ -131,6 +130,13 @@ resource "google_secret_manager_secret" "django_secret_key" {
   depends_on = [google_project_service.required]
 }
 
+resource "google_secret_manager_secret_version" "django_secret_key_version" {
+  secret      = google_secret_manager_secret.django_secret_key.id
+  secret_data = var.django_secret_key
+
+  depends_on = [google_secret_manager_secret.django_secret_key]
+}
+
 resource "google_secret_manager_secret" "database_url" {
   project   = var.project_id
   secret_id = var.database_url_secret_id
@@ -140,6 +146,13 @@ resource "google_secret_manager_secret" "database_url" {
   }
 
   depends_on = [google_project_service.required]
+}
+
+resource "google_secret_manager_secret_version" "database_url_version" {
+  secret      = google_secret_manager_secret.database_url.id
+  secret_data = "postgresql://${var.project_id}:${var.postgres_database_password}@${google_compute_instance.postgres.network_interface.0.network_ip}:5432/tierier"
+
+  depends_on = [google_compute_instance.postgres, google_secret_manager_secret.database_url]
 }
 
 resource "google_service_account" "runtime" {
