@@ -211,6 +211,13 @@ resource "google_secret_manager_secret_iam_member" "runtime_database_url" {
   member    = "serviceAccount:${google_service_account.runtime.email}"
 }
 
+resource "google_secret_manager_secret_iam_member" "runtime_django_allowed_hosts" {
+  project   = var.project_id
+  secret_id = google_secret_manager_secret.django_allowed_hosts.secret_id
+  role      = "roles/secretmanager.secretAccessor"
+  member    = "serviceAccount:${google_service_account.runtime.email}"
+}
+
 resource "google_artifact_registry_repository_iam_member" "cloud_build_writer" {
   project    = var.project_id
   location   = google_artifact_registry_repository.app.location

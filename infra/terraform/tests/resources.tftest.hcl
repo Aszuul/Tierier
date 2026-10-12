@@ -73,8 +73,8 @@ run "service_accounts_and_secret_access" {
   }
 
   assert {
-    condition     = google_secret_manager_secret_iam_member.runtime_django_secret.role == "roles/secretmanager.secretAccessor" && google_secret_manager_secret_iam_member.runtime_database_url.role == "roles/secretmanager.secretAccessor"
-    error_message = "The runtime service account must be able to access both application secrets."
+    condition     = google_secret_manager_secret_iam_member.runtime_django_secret.role == "roles/secretmanager.secretAccessor" && google_secret_manager_secret_iam_member.runtime_database_url.role == "roles/secretmanager.secretAccessor" && google_secret_manager_secret_iam_member.runtime_django_allowed_hosts.role == "roles/secretmanager.secretAccessor"
+    error_message = "The runtime service account must be able to access all application secrets."
   }
 }
 

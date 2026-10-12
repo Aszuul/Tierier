@@ -29,6 +29,7 @@ steps:
           --image='${_IMAGE_REPO}/tierier:${SHORT_SHA}' \
           --platform=managed \
           --region=${_REGION} \
+          --service-account=${_RUNTIME_SERVICE_ACCOUNT} \
           --network=${_VPC_NETWORK} \
           --subnet=${_VPC_SUBNET} \
           --vpc-egress=private-ranges-only \
@@ -46,6 +47,7 @@ substitutions:
   _IMAGE_REPO: '${_REGION}-docker.pkg.dev/${PROJECT_ID}/tierier'
   _SERVICE_NAME: 'tierier'
   _REGION: 'us-central1'
+  _RUNTIME_SERVICE_ACCOUNT: 'tierier-runtime@${PROJECT_ID}.iam.gserviceaccount.com'
   _VPC_NETWORK: 'tierier-vpc'
   _VPC_SUBNET: 'tierier-subnet'
   _ALLOWED_HOSTS: 'django-allowed-hosts'
