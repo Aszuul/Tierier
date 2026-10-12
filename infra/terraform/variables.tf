@@ -98,3 +98,9 @@ variable "postgres_database_password" {
   type        = string
   default     = "tierier"
 }
+
+variable "tierier_domain" {
+  description = "Custom domain for the Tierier application. Configure it in Cloud Run after deployment."
+  type        = string
+  default     = "tierier.com"
+}

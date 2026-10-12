@@ -150,9 +150,27 @@ resource "google_secret_manager_secret" "database_url" {
 
 resource "google_secret_manager_secret_version" "database_url_version" {
   secret      = google_secret_manager_secret.database_url.id
-  secret_data = "postgresql://${var.project_id}:${var.postgres_database_password}@${google_compute_instance.postgres.network_interface.0.network_ip}:5432/tierier"
+  secret_data = "postgresql://tierier:${var.postgres_database_password}@${google_compute_instance.postgres.network_interface.0.network_ip}:5432/tierier"
 
   depends_on = [google_compute_instance.postgres, google_secret_manager_secret.database_url]
+}
+
+resource "google_secret_manager_secret" "django_allowed_hosts" {
+  project   = var.project_id
+  secret_id = "django-allowed-hosts"
+
+  replication {
+    auto {}
+  }
+
+  depends_on = [google_project_service.required]
+}
+
+resource "google_secret_manager_secret_version" "django_allowed_hosts_version" {
+  secret      = google_secret_manager_secret.django_allowed_hosts.id
+  secret_data = "localhost,127.0.0.1,tierier.cloud.run,${var.tierier_domain}"
+
+  depends_on = [google_secret_manager_secret.django_allowed_hosts]
 }
 
 resource "google_service_account" "runtime" {
