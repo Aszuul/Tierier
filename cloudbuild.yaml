@@ -18,6 +18,12 @@ steps:
       - '${_IMAGE_REPO}/tierier:${SHORT_SHA}'
       - .
 
+  - name: 'gcr.io/cloud-builders/docker'
+    id: push
+    args:
+      - push
+      - '${_IMAGE_REPO}/tierier:${SHORT_SHA}'
+
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk:slim'
     id: deploy
     entrypoint: bash
@@ -36,9 +42,6 @@ steps:
           --allow-unauthenticated \
           --set-secrets=DJANGO_SECRET_KEY=${_SECRET_NAME}:latest,DATABASE_URL=${_DB_SECRET_NAME}:latest,DJANGO_ALLOWED_HOSTS=${_ALLOWED_HOSTS}:latest \
           --set-env-vars="^@^DJANGO_DEBUG=False@CSRF_TRUSTED_ORIGINS=${_CSRF_TRUSTED_ORIGINS}"
-
-images:
-  - '${_IMAGE_REPO}/tierier:${SHORT_SHA}'
 
 options:
   logging: CLOUD_LOGGING_ONLY
