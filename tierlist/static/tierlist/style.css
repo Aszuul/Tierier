@@ -96,7 +96,7 @@ a { color: var(--accent-dark); }
 .app-shell {
     width: min(1600px, calc(100% - 48px));
     margin: 0 auto;
-    padding: 36px 0 56px;
+    padding: 16px 0 56px;
 }
 
 .auth-shell { width: min(460px, calc(100% - 48px)); margin: 8vh auto 0; }
