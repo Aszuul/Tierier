@@ -21,6 +21,7 @@
     --button-bg: var(--ink);
     --button-ink: #ffffff;
     color-scheme: light;
+    --logo-url: url("/static/images/logo.png");
 }
 
 :root[data-theme="dark"] {
@@ -46,6 +47,7 @@
     --button-bg: #dce9df;
     --button-ink: #17221d;
     color-scheme: dark;
+    --logo-url: url("/static/images/logo-dark.png");
 }
 
 @media (prefers-color-scheme: dark) {
@@ -72,6 +74,7 @@
         --button-bg: #dce9df;
         --button-ink: #17221d;
         color-scheme: dark;
+        --logo-url: url("/static/images/logo-dark.png");
     }
 }
 
@@ -89,7 +92,18 @@ button { cursor: pointer; }
 a { color: var(--accent-dark); }
 
 .site-nav { display: flex; justify-content: space-between; align-items: center; width: min(1600px, calc(100% - 48px)); margin: 0 auto; padding: 18px 0 0; }
-.site-brand { color: var(--ink); font-size: 18px; font-weight: 700; text-decoration: none; }
+.site-brand {
+    color: var(--ink);
+    font-size: 18px;
+    font-weight: 700;
+    text-decoration: none;
+    background-image: var(--logo-url);
+    background-size: cover;
+    background-position: center;
+    width: 64px;
+    height: 64px;
+}
+/* .site-brand img { content: var(--logo-url); width: 64px; height: 64px; } */
 .account-links { display: flex; align-items: center; gap: 14px; }
 .account-links form { margin: 0; }
 
@@ -153,8 +167,8 @@ h3 { margin: 0; font-size: 18px; }
 }
 
 .panel-heading h2 { margin-bottom: 0; }
-.count, .mono { 
-    color: var(--muted); 
+.count, .mono {
+    color: var(--muted);
     font: 12px "DM Mono", monospace;
 }
 

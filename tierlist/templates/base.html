@@ -25,7 +25,7 @@
 </head>
 <body>
     <nav class="site-nav" aria-label="Account navigation">
-        <a class="site-brand" href="{% url 'tierlist:index' %}"><img width="64" height="64" src="{% static 'images/logo.png' %}" alt="Tierier Logo"></a>
+        <a class="site-brand" href="{% url 'tierlist:index' %}"></a>
         <div class="account-links">
             <button class="button button-small button-quiet" type="button" id="theme-toggle" aria-label="Toggle dark mode" aria-pressed="false">Dark mode</button>
             {% if user.is_authenticated %}
