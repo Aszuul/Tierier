@@ -102,7 +102,7 @@ def build_index_context(choices, categories, memberships, palette):
         category_choice_ids.append({item.choice.id for item in category_choices})
         for index, item in enumerate(category_choices):
             choice_id = item.choice.id
-            scores[choice_id] = round(scores.get(choice_id, 0) + index * (1.1 - category.weight), 1)
+            scores[choice_id] = round(scores.get(choice_id, 0) + index * category.weight, 1)
         category_items.append({
             'id': category.id,
             'name': category.name,
@@ -382,7 +382,6 @@ def remove_category_choice(request, category_id, choice_id):
 
 
 @login_required
-@require_POST
 def save_draft(request):
     draft = request.session.get('tierlist_draft')
     if draft:
