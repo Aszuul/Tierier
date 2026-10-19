@@ -82,9 +82,14 @@ variable "django_secret_id" {
 }
 
 variable "django_secret_key" {
-  description = "Secret value for DJANGO_SECRET_KEY. Create it after the VM starts."
+  description = "Secret value for DJANGO_SECRET_KEY, stored in Secret Manager."
   type        = string
-  default     = "tierier"
+  sensitive   = true
+
+  validation {
+    condition     = length(var.django_secret_key) >= 50
+    error_message = "django_secret_key must be at least 50 characters; use a securely generated value."
+  }
 }
 
 variable "database_url_secret_id" {
@@ -94,9 +99,14 @@ variable "database_url_secret_id" {
 }
 
 variable "postgres_database_password" {
-  description = "Password for the PostgreSQL database user. Create it after the VM starts."
+  description = "Password for the PostgreSQL database user and DATABASE_URL secret."
   type        = string
-  default     = "tierier"
+  sensitive   = true
+
+  validation {
+    condition     = length(var.postgres_database_password) >= 32
+    error_message = "postgres_database_password must be at least 32 characters; use a securely generated value."
+  }
 }
 
 variable "tierier_domain" {

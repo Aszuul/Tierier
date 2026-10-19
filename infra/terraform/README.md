@@ -5,7 +5,7 @@ This Terraform root provisions the shared infrastructure used by the existing Cl
 - Required Google Cloud APIs
 - Artifact Registry Docker repository
 - A private VPC and subnet shared by Cloud Run direct VPC egress and a PostgreSQL Compute Engine VM (`e2-micro`)
-- Secret Manager secret containers (secret values are not managed by Terraform)
+- Secret Manager secret versions populated from required credential inputs
 - A Cloud Run runtime service account and a dedicated Cloud Build deployer service account with scoped IAM
 
 Cloud Build remains the owner of Cloud Run service revisions and image deployment. This avoids Terraform and `gcloud run deploy` competing over the deployed image.
@@ -28,7 +28,7 @@ gcloud storage buckets update gs://UNIQUE_STATE_BUCKET --versioning
 
 ## Initialize and apply
 
-Run these commands from this directory. Copy `terraform.tfvars.example` to `terraform.tfvars` and set the project ID. `terraform.tfvars` is intentionally not committed. The PostgreSQL VM uses Ubuntu 24.04's PostgreSQL package and a 20 GB standard persistent disk.
+Run these commands from this directory. Copy `terraform.tfvars.example` to `terraform.tfvars`, set the project ID, and replace both credential placeholders with independently generated values. For example, `openssl rand -hex 32` produces a 64-character hexadecimal value suitable for each variable. Use the same `postgres_database_password` when setting the PostgreSQL login password below. `terraform.tfvars` is intentionally not committed. The PostgreSQL VM uses Ubuntu 24.04's PostgreSQL package and a 20 GB standard persistent disk.
 
 ```sh
 terraform init -backend-config="bucket=UNIQUE_STATE_BUCKET" -backend-config="prefix=tierier/prod"
@@ -38,7 +38,7 @@ terraform plan -var-file=terraform.tfvars -out=tfplan
 terraform apply tfplan
 ```
 
-Review and protect saved plan files because plans and state can contain sensitive values. Do not commit them. For production, run Terraform through a protected CI identity using Workload Identity Federation or service-account impersonation rather than a downloaded service-account key.
+The credential inputs are marked sensitive in Terraform, but Terraform state and saved plans can still contain their values. Restrict access to the state bucket and local plan/state files; do not commit `terraform.tfvars` or saved plans. For production, run Terraform through a protected CI identity using Workload Identity Federation or service-account impersonation rather than a downloaded service-account key.
 
 This replaces the former Cloud SQL resources. If they already exist in the Terraform state or contain data, back up and migrate that data before applying; Terraform will plan to delete Cloud SQL.
 
@@ -72,7 +72,7 @@ The build-trigger creator needs permission to use the configured build service a
 
 ## Database credentials and secrets
 
-Terraform installs PostgreSQL and creates the application database, but intentionally does not create a PostgreSQL login or secret versions. This keeps database passwords out of Terraform configuration and state. After the VM starts, create the login with a password using IAP SSH:
+Terraform installs PostgreSQL and creates the application database and a `DATABASE_URL` secret version using `postgres_database_password`. Terraform does not create the PostgreSQL login. After the VM starts, create the login using the same password configured in `terraform.tfvars`, using IAP SSH:
 
 ```sh
 gcloud compute ssh tierier-postgres-vm --zone=us-central1-a --tunnel-through-iap --command="sudo -u postgres psql"

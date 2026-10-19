@@ -1,1 +1,5 @@
 project_id = "your-gcp-project-id"
+
+# Replace these placeholders with securely generated values before applying.
+django_secret_key          = "REPLACE_ME"
+postgres_database_password = "REPLACE_ME"

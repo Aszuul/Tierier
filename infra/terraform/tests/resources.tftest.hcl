@@ -8,7 +8,9 @@ mock_provider "google" {
 }
 
 variables {
-  project_id = "tierier-test"
+  project_id                 = "tierier-test"
+  django_secret_key          = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+  postgres_database_password = "abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789"
 }
 
 run "postgres_vm_and_bootstrap" {
@@ -86,4 +88,18 @@ run "reject_invalid_postgres_user" {
   }
 
   expect_failures = [var.postgres_user]
+}
+
+run "reject_weak_credentials" {
+  command = plan
+
+  variables {
+    django_secret_key          = "short"
+    postgres_database_password = "short"
+  }
+
+  expect_failures = [
+    var.django_secret_key,
+    var.postgres_database_password,
+  ]
 }
